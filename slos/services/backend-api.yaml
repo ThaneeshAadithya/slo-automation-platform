@@ -1,0 +1,67 @@
+# SLO definitions for backend-api service
+# Source of truth — changes here auto-generate Prometheus rules + dashboards
+service: backend-api
+team: platform
+namespace: backend
+labels:
+  tier: api
+  criticality: high
+
+slos:
+  # ── SLO 1: Availability ───────────────────────────────────────────────────
+  - name: availability
+    description: "99.9% of API requests succeed (non-5xx)"
+    type: availability
+    target: 0.999       # 99.9% — 43.8 minutes downtime allowed per month
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(http_requests_total{
+          service="backend-api",
+          namespace="backend",
+          status!~"5.."
+        }[{{.window}}]))
+      total_query: |
+        sum(rate(http_requests_total{
+          service="backend-api",
+          namespace="backend"
+        }[{{.window}}]))
+
+    alerting:
+      page_on_burn: true
+      ticket_on_budget_low: true
+      budget_low_threshold: 0.10
+
+    annotations:
+      runbook_url: "https://runbooks.example.com/backend-api/availability"
+      dashboard_url: "https://grafana.example.com/d/backend-api-slo"
+
+  # ── SLO 2: Latency ───────────────────────────────────────────────────────
+  - name: latency-p99
+    description: "p99 latency < 500ms for 95% of time windows"
+    type: latency
+    target: 0.95        # 95% of 5-minute windows must have p99 < 500ms
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(http_request_duration_seconds_bucket{
+          service="backend-api",
+          namespace="backend",
+          le="0.5"
+        }[{{.window}}]))
+      total_query: |
+        sum(rate(http_request_duration_seconds_count{
+          service="backend-api",
+          namespace="backend"
+        }[{{.window}}]))
+      latency_threshold_ms: 500
+
+    alerting:
+      page_on_burn: true
+      ticket_on_budget_low: true
+      budget_low_threshold: 0.15
+
+    annotations:
+      runbook_url: "https://runbooks.example.com/backend-api/latency"

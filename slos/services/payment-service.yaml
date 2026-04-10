@@ -1,0 +1,77 @@
+# SLO definitions for payment-service — stricter targets (financial)
+service: payment-service
+team: payments
+namespace: payments
+labels:
+  tier: payment
+  criticality: critical
+
+slos:
+  - name: availability
+    description: "99.95% of payment requests succeed"
+    type: availability
+    target: 0.9995      # 99.95% — only 21.9 minutes downtime allowed per month
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(http_requests_total{
+          service="payment-service",
+          namespace="payments",
+          status!~"5.."
+        }[{{.window}}]))
+      total_query: |
+        sum(rate(http_requests_total{
+          service="payment-service",
+          namespace="payments"
+        }[{{.window}}]))
+
+    alerting:
+      page_on_burn: true
+      ticket_on_budget_low: true
+      budget_low_threshold: 0.05    # Alert at 5% remaining (stricter)
+
+    annotations:
+      runbook_url: "https://runbooks.example.com/payment-service/availability"
+
+  - name: latency-p99
+    description: "p99 latency < 1000ms (payment processing)"
+    type: latency
+    target: 0.99
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(http_request_duration_seconds_bucket{
+          service="payment-service",
+          namespace="payments",
+          le="1.0"
+        }[{{.window}}]))
+      total_query: |
+        sum(rate(http_request_duration_seconds_count{
+          service="payment-service",
+          namespace="payments"
+        }[{{.window}}]))
+      latency_threshold_ms: 1000
+
+    alerting:
+      page_on_burn: true
+      ticket_on_budget_low: true
+      budget_low_threshold: 0.10
+
+  - name: error-rate
+    description: "Error rate < 0.05% of all payment transactions"
+    type: error_rate
+    target: 0.9995
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(payment_transactions_total{
+          service="payment-service",
+          status="success"
+        }[{{.window}}]))
+      total_query: |
+        sum(rate(payment_transactions_total{
+          service="payment-service"
+        }[{{.window}}]))

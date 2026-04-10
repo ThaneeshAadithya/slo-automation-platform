@@ -1,0 +1,92 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SLO Definition",
+  "description": "Schema for service SLO definitions",
+  "type": "object",
+  "required": ["service", "team", "slos"],
+  "additionalProperties": false,
+  "properties": {
+    "service": {
+      "type": "string",
+      "description": "Service name — must match Kubernetes service label",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "team": {
+      "type": "string",
+      "description": "Owning team"
+    },
+    "namespace": {
+      "type": "string",
+      "default": "default"
+    },
+    "labels": {
+      "type": "object",
+      "additionalProperties": {"type": "string"}
+    },
+    "slos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "target", "window"],
+        "additionalProperties": false,
+        "properties": {
+          "name": {"type": "string"},
+          "description": {"type": "string"},
+          "type": {
+            "type": "string",
+            "enum": ["availability", "latency", "error_rate", "throughput"]
+          },
+          "target": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Target as a ratio (0.999 = 99.9%)"
+          },
+          "window": {
+            "type": "string",
+            "enum": ["7d", "30d", "90d"],
+            "description": "Rolling window for SLO measurement"
+          },
+          "metric": {
+            "type": "object",
+            "required": ["good_query", "total_query"],
+            "properties": {
+              "good_query": {
+                "type": "string",
+                "description": "PromQL for good events (e.g. non-5xx requests)"
+              },
+              "total_query": {
+                "type": "string",
+                "description": "PromQL for total events"
+              },
+              "latency_threshold_ms": {
+                "type": "number",
+                "description": "For latency SLOs: target p99 in milliseconds"
+              }
+            }
+          },
+          "alerting": {
+            "type": "object",
+            "properties": {
+              "page_on_burn": {"type": "boolean", "default": true},
+              "ticket_on_budget_low": {"type": "boolean", "default": true},
+              "budget_low_threshold": {
+                "type": "number",
+                "default": 0.1,
+                "description": "Alert when budget remaining < this fraction"
+              }
+            }
+          },
+          "annotations": {
+            "type": "object",
+            "properties": {
+              "runbook_url": {"type": "string"},
+              "dashboard_url": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

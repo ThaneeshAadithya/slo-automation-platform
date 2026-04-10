@@ -1,0 +1,40 @@
+service: auth-service
+team: platform
+namespace: auth
+labels:
+  tier: auth
+  criticality: high
+
+slos:
+  - name: availability
+    description: "99.9% of auth requests succeed"
+    type: availability
+    target: 0.999
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(http_requests_total{service="auth-service",status!~"5.."}[{{.window}}]))
+      total_query: |
+        sum(rate(http_requests_total{service="auth-service"}[{{.window}}]))
+
+    alerting:
+      page_on_burn: true
+      ticket_on_budget_low: true
+      budget_low_threshold: 0.10
+
+    annotations:
+      runbook_url: "https://runbooks.example.com/auth-service/availability"
+
+  - name: token-validation-latency
+    description: "Token validation p99 < 100ms"
+    type: latency
+    target: 0.999
+    window: 30d
+
+    metric:
+      good_query: |
+        sum(rate(auth_token_validation_duration_seconds_bucket{le="0.1"}[{{.window}}]))
+      total_query: |
+        sum(rate(auth_token_validation_duration_seconds_count[{{.window}}]))
+      latency_threshold_ms: 100
